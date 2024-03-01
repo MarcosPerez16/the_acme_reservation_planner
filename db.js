@@ -6,31 +6,37 @@ const client = new pg.Client(
 
 const createTables = async () => {
   const SQL = `
-        DROP TABLE IF EXISTS reservations;
-        DROP TABLE IF EXISTS customers;
-        DROP TABLE IF EXISTS restaurants;
+    DROP TABLE IF EXISTS reservations;
+    DROP TABLE IF EXISTS customers;
+    DROP TABLE IF EXISTS restaurants;
 
-        CREATE TABLE customers(
-            id UUID PRIMARY KEY,
-            name VARCHAR(100)
-        );
+    CREATE TABLE customers (
+      id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+      name VARCHAR(100)
+    );
 
-        CREATE TABLE restaurants(
-            id UUID PRIMARY KEY,
-            name VARCHAR(100)
-        );
+    CREATE TABLE restaurants (
+      id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+      name VARCHAR(100)
+    );
 
-        CREATE TABLE reservations(
-            id UUID PRIMARY KEY,
-            date DATE NOT NULL,
-            party_count INTEGER NOT NULL,
-            restaurant_id UUID REFERENCES restaurants(id) NOT NULL,
-            customer_id UUID REFERENCES customers(id) NOT NULL
-        );
-            `;
+    CREATE TABLE reservations (
+      id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+      date DATE NOT NULL,
+      party_count INTEGER NOT NULL,
+      restaurant_id UUID REFERENCES restaurants(id) NOT NULL,
+      customer_id UUID REFERENCES customers(id) NOT NULL
+    );
+
+    INSERT INTO customers(name) VALUES ('John Doe'), ('Jane Smith');
+    INSERT INTO restaurants(name) VALUES ('Restaurant A'), ('Restaurant B');
+
+    INSERT INTO reservations(date, party_count, restaurant_id, customer_id)
+      VALUES
+        ('2024-03-01', 5, (SELECT id FROM restaurants WHERE name = 'Restaurant A'), (SELECT id FROM customers WHERE name = 'John Doe')),
+        ('2024-03-02', 3, (SELECT id FROM restaurants WHERE name = 'Restaurant B'), (SELECT id FROM customers WHERE name = 'Jane Smith'));
+  `;
   await client.query(SQL);
-
-  console.log("data seeded");
 };
 
 const createCustomer = async (name) => {
@@ -60,6 +66,14 @@ const fetchCustomers = async () => {
 const fetchRestaurants = async () => {
   const SQL = `
     SELECT * FROM restaurants
+    `;
+  const response = await client.query(SQL);
+  return response.rows;
+};
+
+const fetchReservations = async () => {
+  const SQL = `
+        SELECT * FROM reservations
     `;
   const response = await client.query(SQL);
   return response.rows;
@@ -98,6 +112,7 @@ module.exports = {
   createRestaurant,
   fetchCustomers,
   fetchRestaurants,
+  fetchReservations,
   createReservation,
   destroyReservation,
 };
